@@ -1,0 +1,6 @@
+transaction_id,customer_name,date,amount,currency,location
+W001,Regular Joe,2024-07-01,120.00,USD,New York
+W002,Regular Joe,2024-07-02,45.50,USD,New York
+W003,Regular Joe,2024-07-03,89.00,USD,New York
+W004,Regular Joe,2024-07-04,3200000.00,USD,Zürich
+W005,Regular Joe,2024-07-05,15.00,USD,New York

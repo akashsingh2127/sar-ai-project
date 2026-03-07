@@ -1,0 +1,7 @@
+transaction_id,customer_id,amount,date,sender_account,receiver_account,country,transaction_type
+1,C001,50000,2025-01-01,A100,C001,India,inbound
+2,C001,75000,2025-01-02,A101,C001,India,inbound
+3,C001,60000,2025-01-03,A102,C001,India,inbound
+4,C001,80000,2025-01-04,A103,C001,India,inbound
+5,C001,90000,2025-01-05,A104,C001,India,inbound
+6,C001,1500000,2025-01-06,C001,B200,UAE,outbound

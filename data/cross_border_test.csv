@@ -1,0 +1,6 @@
+id,client,txn_date,value,ccy,origin
+CB-901,Global Imports,2024-09-10,50000.00,GBP,London
+CB-902,Global Imports,2024-09-11,55000.00,GBP,London
+CB-903,Global Imports,2024-09-12,48000.00,GBP,London
+CB-904,Global Imports,2024-09-13,950000.00,GBP,Panama City
+CB-905,Local Bakery,2024-09-10,200.00,GBP,Manchester

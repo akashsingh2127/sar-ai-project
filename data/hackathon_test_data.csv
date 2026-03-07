@@ -1,0 +1,11 @@
+transaction_id,customer_name,date,amount,currency,location
+101,John Doe,2024-05-01,1200.50,USD,New York
+102,Jane Smith,2024-05-01,850.00,USD,London
+103,Robert Brown,2024-05-02,1500.00,USD,Paris
+104,Emily Davis,2024-05-02,950.25,USD,Berlin
+105,Michael Wilson,2024-05-03,1100.00,USD,Tokyo
+106,Unknown Entity,2024-05-03,2500000.00,USD,Cayman Islands
+107,Chris Evans,2024-05-04,1300.00,USD,New York
+108,Scarlett J,2024-05-04,1450.75,USD,London
+109,Mark Ruffalo,2024-05-05,1250.00,USD,Los Angeles
+110,Jeremy Renner,2024-05-05,900.00,USD,Seattle

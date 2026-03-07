@@ -1,0 +1,10 @@
+transaction_id,customer_name,date,amount,currency,location
+S101,Account_99,2024-08-01,9500.00,USD,Miami
+S102,Account_99,2024-08-01,9850.00,USD,Miami
+S103,Account_99,2024-08-01,9200.00,USD,Miami
+S104,Account_99,2024-08-02,9990.00,USD,Miami
+N001,User_A,2024-08-01,150.00,USD,Austin
+N002,User_B,2024-08-01,200.00,USD,Austin
+N003,User_C,2024-08-01,180.00,USD,Austin
+N004,User_D,2024-08-01,210.00,USD,Austin
+N005,User_E,2024-08-01,190.00,USD,Austin
