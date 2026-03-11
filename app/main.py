@@ -11,35 +11,35 @@ from app.llm_service import generate_sar, run_adversarial_audit
 from app.audit import log_audit
 
 def main():
-    print("--- 🛡️ Barclays Hackathon: SAR-AI Generation System ---")
+    print("--- Barclays Hackathon: SAR-AI Generation System ---")
     
     
     csv_path = os.path.join("data", "sample_transactions.csv")
     if not os.path.exists(csv_path):
-        print(f"❌ Error: {csv_path} not found.")
+        print(f" Error: {csv_path} not found.")
         return
 
-    print("📂 Loading dataset...")
+    print(" Loading dataset...")
     df = pd.read_csv(csv_path)
 
     try:
         cols = identify_columns(df)
         amount_col = cols['amount']
         df = safe_numeric_conversion(df, amount_col)
-        print(f"✅ Data cleaned. Monitoring column: '{amount_col}'")
+        print(f"Data cleaned. Monitoring column: '{amount_col}'")
     except Exception as e:
-        print(f"❌ Schema Error: {e}")
+        print(f" Schema Error: {e}")
         return
 
 
-    print("🔍 Scanning for anomalies...")
+    print(" Scanning for anomalies...")
     suspicious_txns = detect_suspicious_transactions(df, amount_col)
     
     if not suspicious_txns:
-        print("✅ No suspicious transactions detected in this batch.")
+        print(" No suspicious transactions detected in this batch.")
         return
 
-    print(f"🚨 Found {len(suspicious_txns)} suspicious records. Starting Multi-Agent Processing...\n")
+    print(f" Found {len(suspicious_txns)} suspicious records. Starting Multi-Agent Processing...\n")
 
 
     for txn in suspicious_txns:
@@ -54,11 +54,11 @@ def main():
     
         evidence_package = generate_evidence(txn, risk_score, typology, amount_col)
  
-        print(f"📡 Agent 1 (Writer): Generating Narrative for ID {txn.get('transaction_id')}...")
+        print(f" Agent 1 (Writer): Generating Narrative for ID {txn.get('transaction_id')}...")
         prompt = build_prompt(evidence_package)
         sar_report = generate_sar(prompt)
         
-        print(f"⚖️ Agent 2 (Auditor): Verifying narrative against raw data...")
+        print(f" Agent 2 (Auditor): Verifying narrative against raw data...")
         audit_note = run_adversarial_audit(sar_report, txn)
         
   
