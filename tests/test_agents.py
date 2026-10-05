@@ -90,10 +90,10 @@ def test_agent_transitions_revision_loop(monkeypatch, sample_evidence):
 def test_supervisor_orchestration_success(monkeypatch, sample_evidence):
     # The supervisor runs everything. We mock a single response for all to simplify,
     # but the auditor needs to say 'VERIFIED'.
-    class MockCallLLM:
+    class MockLLMProvider:
         def __init__(self):
             self.calls = 0
-        def __call__(self, prompt):
+        def generate(self, prompt):
             self.calls += 1
             if self.calls == 1:
                 return "Investigator summary"
@@ -103,13 +103,11 @@ def test_supervisor_orchestration_success(monkeypatch, sample_evidence):
                 return "VERIFIED"
             return "Unexpected"
             
-    import agents.investigator_agent
-    import agents.sar_writer_agent
-    import agents.auditor_agent
-    mock_llm = MockCallLLM()
-    monkeypatch.setattr(agents.investigator_agent, "call_llm", mock_llm)
-    monkeypatch.setattr(agents.sar_writer_agent, "call_llm", mock_llm)
-    monkeypatch.setattr(agents.auditor_agent, "call_llm", mock_llm)
+    import llm.factory
+    def mock_get_llm_provider():
+        return MockLLMProvider()
+        
+    monkeypatch.setattr(llm.factory, "get_llm_provider", mock_get_llm_provider)
 
     supervisor = SupervisorAgent()
     final_state = supervisor.run_investigation(sample_evidence)
