@@ -1,6 +1,6 @@
 from .base_agent import BaseAgent
 from .state import InvestigationState, AgentStatus
-from .llm_client import call_llm
+from llm.factory import get_llm_provider
 
 class InvestigatorAgent(BaseAgent):
     """
@@ -24,7 +24,8 @@ class InvestigatorAgent(BaseAgent):
         """
         
         try:
-            summary = call_llm(prompt)
+            provider = get_llm_provider()
+            summary = provider.generate(prompt)
             if not summary or "LLM Connection Failed" in summary:
                 raise ValueError("Malformed or empty LLM output from Investigator")
                 

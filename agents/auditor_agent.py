@@ -1,6 +1,6 @@
 from .base_agent import BaseAgent
 from .state import InvestigationState, AgentStatus
-from .llm_client import call_llm
+from llm.factory import get_llm_provider
 
 class AuditorAgent(BaseAgent):
     """
@@ -28,7 +28,8 @@ class AuditorAgent(BaseAgent):
         """
         
         try:
-            result = call_llm(prompt)
+            provider = get_llm_provider()
+            result = provider.generate(prompt)
             if not result or "LLM Connection Failed" in result:
                 raise ValueError("Malformed LLM output from Auditor")
                 

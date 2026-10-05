@@ -1,6 +1,6 @@
 from .base_agent import BaseAgent
 from .state import InvestigationState, AgentStatus
-from .llm_client import call_llm
+from llm.factory import get_llm_provider
 
 class SarWriterAgent(BaseAgent):
     """
@@ -35,7 +35,8 @@ class SarWriterAgent(BaseAgent):
             prompt += f"\n\nPrevious Audit Feedback to address (MUST FIX DISCREPANCIES):\n{feedback}"
             
         try:
-            narrative = call_llm(prompt)
+            provider = get_llm_provider()
+            narrative = provider.generate(prompt)
             if not narrative or "LLM Connection Failed" in narrative:
                 raise ValueError("Malformed or empty LLM output from SAR Writer")
                 
