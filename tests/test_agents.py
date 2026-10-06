@@ -44,12 +44,12 @@ def test_agent_transitions_success(monkeypatch, sample_evidence):
     assert state.investigator_summary == "Suspicious large round-number transfer."
     
     # Test Writer
-    monkeypatch.setenv("MOCK_LLM_RESPONSE", "Formal SAR Narrative Draft.")
+    monkeypatch.setenv("MOCK_LLM_RESPONSE", "Formal SAR Narrative Draft for TXN-123. Amount is 50000. Date is 2024-03-01.")
     agent_writer = SarWriterAgent()
     state = agent_writer.execute(state)
     
     assert state.status == AgentStatus.AUDITING
-    assert state.draft_narrative == "Formal SAR Narrative Draft."
+    assert state.draft_narrative == "Formal SAR Narrative Draft for TXN-123. Amount is 50000. Date is 2024-03-01."
     
     # Test Auditor (Verified)
     monkeypatch.setenv("MOCK_LLM_RESPONSE", "VERIFIED: The narrative matches the evidence.")
@@ -98,16 +98,21 @@ def test_supervisor_orchestration_success(monkeypatch, sample_evidence):
             if self.calls == 1:
                 return "Investigator summary"
             elif self.calls == 2:
-                return "Draft narrative"
+                return "Draft narrative TXN-123 50000 2024-03-01"
             elif self.calls == 3:
                 return "VERIFIED"
             return "Unexpected"
             
-    import llm.factory
+    mock_instance = MockLLMProvider()
     def mock_get_llm_provider():
-        return MockLLMProvider()
+        return mock_instance
         
-    monkeypatch.setattr(llm.factory, "get_llm_provider", mock_get_llm_provider)
+    import agents.investigator_agent
+    import agents.sar_writer_agent
+    import agents.auditor_agent
+    monkeypatch.setattr(agents.investigator_agent, "get_llm_provider", mock_get_llm_provider)
+    monkeypatch.setattr(agents.sar_writer_agent, "get_llm_provider", mock_get_llm_provider)
+    monkeypatch.setattr(agents.auditor_agent, "get_llm_provider", mock_get_llm_provider)
 
     supervisor = SupervisorAgent()
     final_state = supervisor.run_investigation(sample_evidence)
@@ -117,7 +122,28 @@ def test_supervisor_orchestration_success(monkeypatch, sample_evidence):
 
 def test_supervisor_max_revisions(monkeypatch, sample_evidence):
     # Auditor always returns discrepancy, causing an infinite loop if not for supervisor max_revisions
-    monkeypatch.setenv("MOCK_LLM_RESPONSE", "DISCREPANCY: Constant error.")
+    class MockLLMProvider:
+        def __init__(self):
+            self.calls = 0
+        def generate(self, prompt):
+            self.calls += 1
+            if self.calls == 1:
+                return "Investigator summary"
+            elif self.calls % 2 == 0:
+                return "Draft narrative TXN-123 50000 2024-03-01"
+            else:
+                return "DISCREPANCY: Constant error."
+                
+    mock_instance = MockLLMProvider()
+    def mock_get_llm_provider():
+        return mock_instance
+        
+    import agents.investigator_agent
+    import agents.sar_writer_agent
+    import agents.auditor_agent
+    monkeypatch.setattr(agents.investigator_agent, "get_llm_provider", mock_get_llm_provider)
+    monkeypatch.setattr(agents.sar_writer_agent, "get_llm_provider", mock_get_llm_provider)
+    monkeypatch.setattr(agents.auditor_agent, "get_llm_provider", mock_get_llm_provider)
     
     supervisor = SupervisorAgent(max_revisions=2)
     final_state = supervisor.run_investigation(sample_evidence)
