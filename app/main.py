@@ -72,16 +72,25 @@ def main():
             # Run Supervisor state machine
             final_state = supervisor.run_investigation(evidence_package)
             
-            sar_report = final_state.draft_narrative
-            audit_note = final_state.audit_feedback if final_state.audit_feedback else "VERIFIED"
+            structured_sar = final_state.structured_sar
+            if structured_sar:
+                sar_report = structured_sar.to_txt()
+                audit_note = f"{structured_sar.validation_status} - Discrepancies: {len(structured_sar.audit_result.get('discrepancies', [])) if structured_sar.audit_result else 0}"
+            else:
+                sar_report = final_state.draft_narrative
+                audit_note = final_state.audit_feedback if final_state.audit_feedback else "VERIFIED"
             
             # Format output
             risk_score = evidence_package.get('risk_score', 0.0)
-            typology_str = ", ".join([t.get('name', 'Unknown') for t in evidence_package.get('typologies', [])])
+            typologies = evidence_package.get('typologies', [])
+            if isinstance(typologies, list):
+                typology_str = ", ".join([t.get('name', 'Unknown') if isinstance(t, dict) else str(t) for t in typologies])
+            else:
+                typology_str = str(typologies)
             if not typology_str:
                 typology_str = "None"
             
-            log_audit(evidence_package, sar_report)
+            log_audit(evidence_package, sar_report, structured_sar)
 
             print("\n" + "═"*60)
             print(f"ID: {txn_id} | SUBJECT: {txn_series.get('sender', 'UNKNOWN')}")

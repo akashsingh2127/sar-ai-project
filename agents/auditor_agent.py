@@ -26,13 +26,23 @@ class AuditorAgent(BaseAgent):
         return discrepancies
 
     def execute(self, state: InvestigationState) -> InvestigationState:
+        from .models import ReportStatus
+        
+        narrative_to_check = state.structured_sar.narrative if state.structured_sar else (state.draft_narrative or "")
+        
         # 1. Deterministic Check
-        det_discrepancies = self._deterministic_fact_check(state.evidence_package, state.draft_narrative or "")
+        det_discrepancies = self._deterministic_fact_check(state.evidence_package, narrative_to_check)
         
         if det_discrepancies:
             state.is_verified = False
             state.audit_feedback = "DETERMINISTIC DISCREPANCY: " + "; ".join(det_discrepancies)
             state.status = AgentStatus.REVISING
+            if state.structured_sar:
+                state.structured_sar.report_status = ReportStatus.FACT_CHECK_FAILED
+                state.structured_sar.audit_result = {
+                    "validation_status": "FAILED",
+                    "discrepancies": det_discrepancies
+                }
             return state
 
         # 2. LLM Check
@@ -44,7 +54,7 @@ class AuditorAgent(BaseAgent):
         {state.evidence_package}
         
         NARRATIVE TO AUDIT: 
-        {state.draft_narrative}
+        {narrative_to_check}
         
         Check for:
         1. Correct Transaction ID, Amount, and Dates.
@@ -65,10 +75,24 @@ class AuditorAgent(BaseAgent):
                 state.is_verified = True
                 state.audit_feedback = None
                 state.status = AgentStatus.COMPLETED
+                if state.structured_sar:
+                    state.structured_sar.report_status = ReportStatus.READY_FOR_REVIEW
+                    state.structured_sar.validation_status = "PASSED"
+                    state.structured_sar.audit_result = {
+                        "validation_status": "PASSED",
+                        "discrepancies": []
+                    }
             else:
                 state.is_verified = False
                 state.audit_feedback = result
                 state.status = AgentStatus.REVISING
+                if state.structured_sar:
+                    state.structured_sar.report_status = ReportStatus.AUDITOR_FLAGGED
+                    state.structured_sar.validation_status = "FAILED"
+                    state.structured_sar.audit_result = {
+                        "validation_status": "FAILED",
+                        "discrepancies": [result.strip()]
+                    }
         except Exception as e:
             state.errors.append(str(e))
             state.status = AgentStatus.FAILED

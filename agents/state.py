@@ -19,6 +19,7 @@ class InvestigationState:
     
     investigator_summary: Optional[str] = None
     draft_narrative: Optional[str] = None
+    structured_sar: Optional[Any] = None # Will hold StructuredSAR, typed as Any to avoid circular import if needed
     audit_feedback: Optional[str] = None
     
     is_verified: bool = False

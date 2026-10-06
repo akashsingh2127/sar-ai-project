@@ -115,22 +115,37 @@ else:
                     
                     final_state = supervisor.run_investigation(evidence_package)
                     
-                    sar_report = final_state.draft_narrative
-                    audit_note = final_state.audit_feedback if final_state.audit_feedback else "VERIFIED"
+                    structured_sar = final_state.structured_sar
+                    if structured_sar:
+                        sar_report = structured_sar.to_txt()
+                        audit_note = f"{structured_sar.validation_status} - Discrepancies: {len(structured_sar.audit_result.get('discrepancies', [])) if structured_sar.audit_result else 0}"
+                    else:
+                        sar_report = final_state.draft_narrative
+                        audit_note = final_state.audit_feedback if final_state.audit_feedback else "VERIFIED"
+                        
                     risk = evidence_package.get('risk_score', 0.0)
                     
                     typologies = evidence_package.get('typologies', [])
-                    typology_str = ", ".join([t.get('name', 'Unknown') for t in typologies]) if typologies else "None"
+                    if isinstance(typologies, list):
+                        typology_str = ", ".join([t.get('name', 'Unknown') if isinstance(t, dict) else str(t) for t in typologies])
+                    else:
+                        typology_str = str(typologies)
+                    if not typology_str:
+                        typology_str = "None"
                     
                     signals = []
                     for sig in evidence_package.get('anomaly_signals', []):
-                        signals.append(f"{sig['signal']}: {sig['raw']}")
+                        if isinstance(sig, dict):
+                            signals.append(f"{sig.get('signal')}: {sig.get('raw')}")
+                        else:
+                            signals.append(str(sig))
                     context_msg = " | ".join(signals) if signals else "No specific historical deviation detected."
                     
                     st.session_state.current_data = {
                         "risk": risk, "typology": typology_str, "context": context_msg, 
                         "audit": audit_note, "report": sar_report, "evidence": evidence_package,
-                        "id": selected_id
+                        "id": selected_id,
+                        "structured_sar": structured_sar
                     }
                     status.update(label="Full Audit Complete!", state="complete")
 
@@ -158,9 +173,15 @@ else:
                 with col_left:
                     # THE AUDIT TRAIL OPTION
                     if st.button("✅ Approve & Log to Audit Trail"):
-                        log_audit(data['evidence'], final_report)
+                        structured_sar = data.get('structured_sar')
+                        if structured_sar:
+                            from agents.models import ReportStatus, ReviewerStatus
+                            structured_sar.report_status = ReportStatus.APPROVED
+                            structured_sar.reviewer_status = ReviewerStatus.APPROVED
+                            
+                        log_audit(data['evidence'], final_report, structured_sar)
                         st.balloons()
-                        st.success(f"Transaction {data['id']} successfully logged to audit_trail.jsonl")
+                        st.success(f"Transaction {data['id']} successfully logged to SQLite Storage!")
                 
                 with col_right:
                     # THE DOWNLOAD TXT OPTION

@@ -82,7 +82,7 @@ Financial institutions process hundreds of millions of transactions daily. Detec
 ┌─────────────────────────────────────────────────────────────┐
 │              Agent 1: SAR Narrative Generator               │
 │         narrative.py → build_prompt()                       │
-│         llm_service.py → generate_sar()  [Llama3]          │
+│         llm_service.py → generate_sar()                    │
 └─────────────────────────┬───────────────────────────────────┘
                           │
                           ▼
@@ -94,8 +94,8 @@ Financial institutions process hundreds of millions of transactions daily. Detec
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              Audit Trail Logging                            │
-│         audit.py → log_audit()  →  audit_trail.jsonl       │
+│              SQLite Audit Trail Logging                     │
+│         storage.py → Storage()  →  sar_data.db             │
 └─────────────────────────┬───────────────────────────────────┘
                           │
                           ▼
@@ -200,17 +200,27 @@ The Streamlit dashboard provides an end-to-end interactive compliance investigat
 ```
 sar-ai-project/
 │
+├── agents/                       # Multi-agent components
+│   ├── auditor_agent.py          # LLM auditing
+│   ├── models.py                 # Structured schemas
+│   ├── sar_writer_agent.py       # Narrative drafting
+│   └── state.py                  # Agent state structures
+│
 ├── app/                          # Core pipeline modules
-│   ├── audit.py                  # Audit trail logging
+│   ├── audit.py                  # Audit trail logging wrapper
 │   ├── detection.py              # Z-score anomaly detection
 │   ├── evidence.py               # Evidence package assembly
-│   ├── llm_service.py            # Ollama/Llama3 LLM interface
+│   ├── llm_service.py            # LLM interface (Gemini/Ollama)
 │   ├── narrative.py              # SAR prompt construction
 │   ├── schema.py                 # Schema-agnostic column detection
 │   ├── scorer.py                 # Multi-factor risk scoring
+│   ├── storage.py                # SQLite database management
 │   ├── typology.py               # AML typology classification
 │   ├── utils.py                  # Data cleaning utilities
 │   └── main.py                   # CLI entry point
+│
+├── evaluation/                   # Pipeline evaluation tools
+│   └── evaluator.py              # Statistical evaluation
 │
 ├── ui/                           # Dashboard
 │   ├── dashboard.py              # Streamlit dashboard
@@ -220,7 +230,7 @@ sar-ai-project/
 ├── data/
 │   └── sample_transactions.csv   # Sample dataset (not included in repo)
 │
-├── audit_trail.jsonl             # Auto-generated audit log (gitignored)
+├── sar_data.db                   # SQLite Database (generated)
 ├── requirements.txt
 ├── .gitignore
 └── README.md
@@ -321,17 +331,12 @@ Optional but recommended: `transaction_id`, `customer_id` / `customer_name` / `a
 
 ## 📋 Audit Log Format
 
-All pipeline decisions are appended to `audit_trail.jsonl`. Each entry contains:
+All pipeline decisions are recorded into the `sar_data.db` SQLite database across structured tables:
+- `investigations`: Tracks risk score, typologies, and flags
+- `sar_reports`: Stores generated structured narratives and verification status
+- `audit_logs`: Detailed operational logging with context
 
-```json
-{
-  "timestamp": "2026-03-10T12:30:21.441872",
-  "transaction_id": "TXN48321",
-  "risk_level": 89.2,
-  "typology": "Significant Outlier / Possible Structuring",
-  "summary": "The transaction significantly exceeds historical averages for the account holder..."
-}
-```
+A robust audit log provides data traceability.
 
 ---
 
@@ -342,15 +347,15 @@ This prototype was built for a hackathon and has several known issues that must 
 | Area | Current State | Production Requirement |
 |---|---|---|
 | **Risk floor** | Scores below 75 are hardcoded to 78.45 | Remove floor; use calibrated probabilistic scoring |
-| **LLM auditor** | Auditor is an LLM and can hallucinate | Add deterministic code-based fact checks |
-| **LLM interface** | `subprocess` call to Ollama | Use async REST API with retry/backoff/circuit breaker |
-| **Audit storage** | Append-only JSONL flat file | PostgreSQL with tamper-evident write-once schema |
+| **LLM auditor** | Now uses a deterministic validation pass + LLM check | Add further rigorous heuristic checks |
+| **LLM interface** | Uses robust Gemini SDK integration (where available) | Add fallback circuit breakers |
+| **Audit storage** | SQLite with structured schemas (`storage.py`) | Add PostgreSQL replication for scale |
 | **Anomaly detection** | Single-transaction Z-score only | Add temporal/sequence analysis to catch structuring |
 | **Typology** | Based only on deviation score | Multi-signal typology using transaction networks |
-| **Human review** | Optional in UI | Mandatory gated approval before any SAR filing |
+| **Human review** | Integrated in UI for SAR logging | Mandatory gated approval before any SAR filing |
 | **Explainability** | Risk score partially opaque | Full SHAP/LIME explainability for regulatory defence |
 | **Scale** | Batch CSV processing | Real-time streaming (Kafka / Kinesis) |
-| **Model** | Generic Llama3 | Fine-tuned AML-specific model on labelled SAR corpus |
+| **Model** | LLM-based | Fine-tuned AML-specific model on labelled SAR corpus |
 
 ---
 
@@ -359,10 +364,10 @@ This prototype was built for a hackathon and has several known issues that must 
 - [ ] Replace Z-score with Isolation Forest / ECOD for non-Gaussian distributions
 - [ ] Temporal sequence detection for structuring patterns
 - [ ] Graph-based network analysis for connected entity fraud
-- [ ] Deterministic hallucination checks in the auditor layer
+- [x] Deterministic hallucination checks in the auditor layer
 - [ ] Fine-tuned open-source LLM on AML SAR corpora
 - [ ] FastAPI backend + React frontend replacing Streamlit
-- [ ] PostgreSQL audit trail with write-once compliance schema
+- [x] SQLite audit trail with structured schema (prep for PostgreSQL)
 - [ ] Real-time streaming ingestion via Kafka
 - [ ] SHAP explainability layer for risk scores
 - [ ] Integration with core banking API (ISO 20022)
