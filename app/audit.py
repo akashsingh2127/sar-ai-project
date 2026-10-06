@@ -1,13 +1,13 @@
 import json
 from datetime import datetime, timezone
-from app.storage import Storage
+from storage import get_storage
 
 def log_audit(evidence, sar_report, structured_sar=None):
     """
-    Logs investigation details to SQLite. 
+    Logs investigation details to the configured storage backend.
     Maintains backward compatibility with string sar_report.
     """
-    storage = Storage()
+    storage = get_storage()
     
     # Extract IDs
     transaction_id = str(evidence.get('transaction_details', {}).get('transaction_id') or evidence.get('transaction_id', 'Unknown'))
