@@ -10,15 +10,19 @@ root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if root_path not in sys.path:
     sys.path.insert(0, root_path)
 
-# Import Agents
+# Import New Architecture Modules
 from app.utils import safe_numeric_conversion
 from app.schema import identify_columns
-from app.scorer import calculate_risk_score
-from app.typology import assign_typology
-from app.evidence import generate_evidence
-from app.narrative import build_prompt
-from app.llm_service import generate_sar, run_adversarial_audit
 from app.audit import log_audit
+
+from detection.detector_pipeline import DetectorPipeline
+from detection.zscore import ZScoreDetector
+from detection.isolation_forest import IsolationForestDetector
+from risk.scorer import RiskScorer
+from analysis.typologies import TypologyEngine
+from analysis.network import NetworkAnalyzer
+from evidence.engine import EvidenceEngine
+from agents.supervisor_agent import SupervisorAgent
 
 # --- UI CONFIG ---
 st.set_page_config(page_title="Barclays SAR-AI | Multi-Agent", page_icon="🛡️", layout="wide")
@@ -67,9 +71,16 @@ else:
         st.subheader("🔍 Step 2: Suspicion Detection")
         z_threshold = st.sidebar.slider("Anomaly Sensitivity (Z-Score)", 1.0, 5.0, 2.0)
         
-        mean, std = df[amount_col].mean(), df[amount_col].std()
-        df["deviation_score"] = (df[amount_col] - mean) / (std if std != 0 else 1)
-        df["is_suspicious"] = df["deviation_score"] > z_threshold
+        detector = DetectorPipeline(detectors=[])
+        zscore_detector = ZScoreDetector(threshold=z_threshold)
+        detector.detectors.append(zscore_detector)
+        detector.detectors.append(IsolationForestDetector())
+        
+        detector.fit(df)
+        anomalies_df = detector.predict(df)
+        suspicious_txns_ids = anomalies_df[anomalies_df['is_anomaly'] == True]['transaction_id'].unique()
+        
+        df["is_suspicious"] = df["transaction_id"].isin(suspicious_txns_ids)
         suspicious_df = df[df["is_suspicious"]]
 
         st.dataframe(suspicious_df, use_container_width=True)
@@ -91,25 +102,34 @@ else:
                 txn_row = suspicious_df[suspicious_df['transaction_id'] == selected_id].iloc[0].to_dict()
                 
                 with st.status("Agents Collaborating...") as status:
-                    risk = calculate_risk_score(txn_row, df)
+                    risk_scorer = RiskScorer()
+                    typology_engine = TypologyEngine()
+                    network_analyzer = NetworkAnalyzer()
+                    network_analyzer.build_graph(df)
                     
-                    # Logic for history display
-                    potential_keys = ['customer_id', 'customer_name', 'account_number']
-                    user_key = next((k for k in potential_keys if k in txn_row), 'transaction_id')
-                    user_txns = df[df[user_key] == txn_row[user_key]]
-                    user_avg = user_txns[amount_col].mean()
+                    evidence_engine = EvidenceEngine(risk_scorer, typology_engine, network_analyzer)
+                    supervisor = SupervisorAgent()
                     
-                    spike_pct = (txn_row[amount_col]/user_avg)*100 if user_avg > 0 else 100
-                    context_msg = f"Historical Context: Amount is {spike_pct:.1f}% of user average."
+                    evidence_package_obj = evidence_engine.generate(str(selected_id), df)
+                    evidence_package = evidence_package_obj.model_dump()
                     
-                    typology = assign_typology(txn_row)
-                    evidence = generate_evidence(txn_row, risk, typology, amount_col)
-                    report = generate_sar(build_prompt(evidence))
-                    audit_note = run_adversarial_audit(report, txn_row)
+                    final_state = supervisor.run_investigation(evidence_package)
+                    
+                    sar_report = final_state.draft_narrative
+                    audit_note = final_state.audit_feedback if final_state.audit_feedback else "VERIFIED"
+                    risk = evidence_package.get('risk_score', 0.0)
+                    
+                    typologies = evidence_package.get('typologies', [])
+                    typology_str = ", ".join([t.get('name', 'Unknown') for t in typologies]) if typologies else "None"
+                    
+                    signals = []
+                    for sig in evidence_package.get('anomaly_signals', []):
+                        signals.append(f"{sig['signal']}: {sig['raw']}")
+                    context_msg = " | ".join(signals) if signals else "No specific historical deviation detected."
                     
                     st.session_state.current_data = {
-                        "risk": risk, "typology": typology, "context": context_msg, 
-                        "audit": audit_note, "report": report, "evidence": evidence,
+                        "risk": risk, "typology": typology_str, "context": context_msg, 
+                        "audit": audit_note, "report": sar_report, "evidence": evidence_package,
                         "id": selected_id
                     }
                     status.update(label="Full Audit Complete!", state="complete")
