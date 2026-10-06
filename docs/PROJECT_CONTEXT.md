@@ -147,7 +147,17 @@ The new data pipeline is implemented across several modules:
 | 9 | Complete | Multi-Agent Orchestration (`agents/`) |
 
 ## 24. Partially Completed Work
-- **Persistence:** Currently uses JSONL (`app/audit.py`). Advanced SQLite logging (Phase 11) needs implementation.
+- **Persistence:** Fully implemented via `storage/` abstraction (Phase 11). Supports SQLite (default) and JSONL.
+
+## 24b. Persistence Architecture (Phase 11)
+- **Storage Abstraction:** The `storage.base.StorageProvider` interface defines persistence methods (e.g. `save_investigation`, `save_sar_report`, `log_audit`).
+- **SQLite Schema:** Uses `sar_data.db` (configured via `SAR_DB_PATH`) containing `investigations`, `sar_reports`, and `audit_logs` tables.
+- **JSONL Compatibility:** `storage/jsonl_store.py` enables append-only JSONL mode compatible with legacy `audit_trail.jsonl`, controlled via `STORAGE_BACKEND=jsonl`.
+- **Stored Entities:** Investigations, SAR reports, risk scores, reviewer decisions, and operational audit events are tracked deterministically.
+- **Backend Configuration:** Managed by `storage/__init__.py` (reads `STORAGE_BACKEND`).
+- **Timestamps:** ISO 8601 UTC timestamps are universally enforced.
+- **Tests:** A full test suite for both SQLite and JSONL exists in `tests/test_storage.py`, successfully validating persistence, edge cases (duplicate/malformed lines), and retrieval.
+- **Migration & Limitations:** Currently no automatic migration script from JSONL to SQLite. SQLite handles concurrent local writes well but could face lock contention under extremely high multi-threaded concurrency.
 
 ## 25. Known Bugs / Technical Debt
 - **Integration Debt:** The legacy `app/` directory and `ui/dashboard.py` are completely disjointed from the new architecture (`agents/`, `evidence/`, `risk/`, etc.). 
@@ -165,13 +175,13 @@ The new data pipeline is implemented across several modules:
 
 ## 28. Current Development Position
 **COMPLETED THROUGH:** 
-Phase 14 (Final Documentation)
+Phase 11 (Persistent Storage + Audit Trail)
 
 **CURRENT CHUNK:** 
-FINAL (Full Engineering Audit)
+Phase 11
 
 **NEXT TASK:** 
-Conduct a comprehensive review of the code, architecture, and compliance standards.
+Phase 12 (Streamlit Dashboard Integration)
 
 ## 29. Future Development Rules
 - Do not rewrite working modules unnecessarily.
