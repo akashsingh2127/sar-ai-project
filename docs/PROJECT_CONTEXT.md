@@ -77,7 +77,11 @@ The new data pipeline is implemented across several modules:
 - **Configuration:** Managed via `LLM_PROVIDER` environment variable in `factory.py`.
 
 ## 13. Deterministic Validation
-- **Status:** The auditor agent currently relies primarily on an LLM to cross-check facts. Pure deterministic code-based checking (e.g., strict string matching of amounts and IDs) within the new architecture needs to be fully integrated (partially handled in the auditor prompt but requires strict programmatic gating).
+- **Status:** Fully implemented in `agents/validators.py`.
+- **Architecture:** The `AuditorAgent` runs a deterministic factual validation suite *before* utilizing the LLM for semantic review. 
+- **Validators:** Include strict checks for `validate_transaction_id`, `validate_amount`, `validate_currency`, `validate_date`, `validate_customer_id`, and `validate_typology_evidence`.
+- **Audit Result Schema:** Uses a structured Pydantic `AuditResult` model containing `overall_passed`, `checks_run`, `discrepancies`, `unsupported_claims`, and `missing_evidence`.
+- **LLM Relationship:** The deterministic engine ensures exact factual consistency (amounts, IDs, dates). The LLM is strictly used for semantic coherence and narrative tone.
 
 ## 14. SAR Generation
 - **Implemented in:** `agents/sar_writer_agent.py` (new architecture) and `app/llm_service.py` (legacy).
@@ -143,8 +147,7 @@ The new data pipeline is implemented across several modules:
 | 9 | Complete | Multi-Agent Orchestration (`agents/`) |
 
 ## 24. Partially Completed Work
-- **Deterministic Validation:** The `AuditorAgent` exists but relies on LLM cross-checking. Strict programmatic validation is missing.
-- **Persistence:** Currently uses JSONL (`app/audit.py`). SQLite logging needs implementation if part of the roadmap.
+- **Persistence:** Currently uses JSONL (`app/audit.py`). Advanced SQLite logging (Phase 11) needs implementation.
 
 ## 25. Known Bugs / Technical Debt
 - **Integration Debt:** The legacy `app/` directory and `ui/dashboard.py` are completely disjointed from the new architecture (`agents/`, `evidence/`, `risk/`, etc.). 
@@ -157,20 +160,18 @@ The new data pipeline is implemented across several modules:
 - **Avoided Complexity:** Resisted adding Kafka, Kubernetes, or microservices, keeping the project locally runnable and conceptually clean.
 
 ## 27. Original Requirements Still To Implement
-- Wire the new modular architecture into the main entry point and UI.
-- Deterministic fact validation (programmatic).
-- Advanced SQLite persistence.
-- Final pipeline testing and evaluation.
+- Advanced SQLite persistence (Phase 11).
+- Final pipeline testing and evaluation (Phase 13).
 
 ## 28. Current Development Position
 **COMPLETED THROUGH:** 
-Chunk 9 (Multi-Agent Workflow)
+Phase 10 (Main Pipeline Integration & UI Wiring)
 
 **CURRENT CHUNK:** 
-Chunk 10 (Main Pipeline Integration & UI Wiring - Assumption based on current state)
+Phase 11 (Persistent Storage + Audit Trail)
 
 **NEXT TASK:** 
-Refactor `app/main.py` and `ui/dashboard.py` to consume the new architecture instead of the legacy `app/` modules. Add programmatic deterministic validation if required.
+Implement a structured SQLite-based persistence layer to replace JSONL.
 
 ## 29. Future Development Rules
 - Do not rewrite working modules unnecessarily.
