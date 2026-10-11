@@ -1,5 +1,15 @@
-import pandas as pd
+import sys
 import os
+import pandas as pd
+from dotenv import load_dotenv
+
+# Path fix for local imports
+root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if root_path not in sys.path:
+    sys.path.insert(0, root_path)
+
+load_dotenv()
+
 from app.utils import safe_numeric_conversion
 from app.schema import identify_columns
 
@@ -10,28 +20,31 @@ from analysis.network import NetworkAnalyzer
 from evidence.engine import EvidenceEngine
 from agents.supervisor_agent import SupervisorAgent
 from app.audit import log_audit
+from app.logger import setup_logger
+
+logger = setup_logger("sar_ai.main")
 
 def main():
-    print("--- Barclays Hackathon: SAR-AI Generation System ---")
+    logger.info("--- Barclays Hackathon: SAR-AI Generation System ---")
     
     csv_path = os.path.join("data", "sample_transactions.csv")
     if not os.path.exists(csv_path):
-        print(f" Error: {csv_path} not found.")
+        logger.error(f"Error: {csv_path} not found.")
         return
 
-    print(" Loading dataset...")
+    logger.info("Loading dataset...")
     df = pd.read_csv(csv_path)
 
     try:
         cols = identify_columns(df)
         amount_col = cols['amount']
         df = safe_numeric_conversion(df, amount_col)
-        print(f"Data cleaned. Monitoring column: '{amount_col}'")
+        logger.info(f"Data cleaned. Monitoring column: '{amount_col}'")
     except Exception as e:
-        print(f" Schema Error: {e}")
+        logger.exception(f"Schema Error: {e}")
         return
 
-    print(" Initializing Pipeline Components...")
+    logger.info("Initializing Pipeline Components...")
     detector = DetectorPipeline(detectors=['zscore', 'isolation_forest'])
     risk_scorer = RiskScorer()
     typology_engine = TypologyEngine()
@@ -43,26 +56,26 @@ def main():
     evidence_engine = EvidenceEngine(risk_scorer, typology_engine, network_analyzer)
     supervisor = SupervisorAgent()
 
-    print(" Scanning for anomalies...")
+    logger.info("Scanning for anomalies...")
     detector.fit(df)
     anomalies_df = detector.predict(df)
     
     suspicious_txns = anomalies_df[anomalies_df['is_anomaly'] == True]
     
     if suspicious_txns.empty:
-        print(" No suspicious transactions detected in this batch.")
+        logger.info("No suspicious transactions detected in this batch.")
         return
 
     # We need unique transaction IDs that are anomalous
     unique_suspicious_ids = suspicious_txns['transaction_id'].unique()
 
-    print(f" Found {len(unique_suspicious_ids)} suspicious records. Starting Multi-Agent Processing...\n")
+    logger.info(f"Found {len(unique_suspicious_ids)} suspicious records. Starting Multi-Agent Processing...")
 
     for txn_id in unique_suspicious_ids:
         # Get raw transaction data from original df
         txn_series = df[df['transaction_id'].astype(str) == str(txn_id)].iloc[0]
         
-        print(f" Orchestrating agents for ID {txn_id}...")
+        logger.info(f"Orchestrating agents for ID {txn_id}...")
         
         try:
             # Generate deterministic evidence package
@@ -92,18 +105,18 @@ def main():
             
             log_audit(evidence_package, sar_report, structured_sar)
 
-            print("\n" + "═"*60)
+            print("\n" + "="*60)
             print(f"ID: {txn_id} | SUBJECT: {txn_series.get('sender', 'UNKNOWN')}")
             print(f"RISK: {risk_score:.2f} | TYPOLOGY: {typology_str}")
             print(f"AUDIT STATUS: {audit_note}")
-            print("─" * 60)
+            print("-" * 60)
             print(sar_report)
-            print("═"*60 + "\n")
+            print("="*60 + "\n")
             
         except Exception as e:
-            print(f"Error processing transaction {txn_id}: {e}")
+            logger.exception(f"Error processing transaction {txn_id}: {e}")
 
-    print(" Pipeline execution complete. Audit logs updated.")
+    logger.info("Pipeline execution complete. Audit logs updated.")
 
 if __name__ == "__main__":
     main()

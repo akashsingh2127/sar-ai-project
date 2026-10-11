@@ -3,3 +3,7 @@ venv/
 __pycache__/
 *.pyc
 logs/
+*.db
+*.jsonl
+.pytest_cache/
+.DS_Store

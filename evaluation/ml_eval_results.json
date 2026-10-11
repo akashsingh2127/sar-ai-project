@@ -1,0 +1,7 @@
+{
+  "total_transactions": 6,
+  "flagged_transactions": 0,
+  "percentage_flagged": 0.0,
+  "supervised_metrics_available": false,
+  "reason": "Ground truth labels not available in dataset."
+}
