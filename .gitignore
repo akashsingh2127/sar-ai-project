@@ -1,9 +1,89 @@
-venv/
-.env
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
-logs/
+*.py[cod]
+*$py.class
+*.so
+
+# C extensions & distributions
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+*.env
+.env.local
+
+# Databases, Local Storage & Audit Trails
 *.db
+*.sqlite
+*.sqlite3
 *.jsonl
+sar_data.db
+test_sar.db
+audit_trail.jsonl
+
+# Logs & Runtime Artifacts
+*.log
+logs/
+*.log.*
+test_results.txt
+
+# Testing & Coverage
 .pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# Jupyter Notebooks & Data Caches
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+.cache/
+.huggingface/
+
+# Streamlit Local Secrets
+.streamlit/secrets.toml
+
+# IDE & Editor Configurations
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Operating System Artifacts
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
