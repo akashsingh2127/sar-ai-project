@@ -222,10 +222,15 @@ streamlit run ui/dashboard.py
 Navigate to `http://localhost:8501`.
 
 ### CLI Batch Execution
+Run the end-to-end pipeline via CLI for either local CSV data or Hugging Face streaming datasets:
 ```bash
-python -m app.main
+# Run using local CSV (default: data/sample_transactions.csv)
+python -m app.main --source csv
+
+# Run using Hugging Face streaming dataset (default: eexzzm/IBM-Transactions-for-Anti-Money-Laundering-HI-Small-Trans)
+python -m app.main --source hf --max-records 100
 ```
-This runs the end-to-end pipeline on `data/sample_transactions.csv` and updates the local database.
+This runs ingestion, preprocessing, ML anomaly detection, multi-factor risk scoring, typology identification, evidence compilation, multi-agent investigation & drafting, factual validation, and persistent audit logging to SQLite and the configured `AUDIT_LOG_PATH`.
 
 ---
 
