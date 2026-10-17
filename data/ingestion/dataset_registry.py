@@ -13,3 +13,5 @@ DATASET_REGISTRY = {
         }
     }
 }
+
+DEFAULT_DATASET = "ibm_aml"

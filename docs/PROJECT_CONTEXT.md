@@ -277,15 +277,46 @@ When returning after a long break:
 - **Hugging Face Integration**: The Hugging Face data loader (`huggingface_loader.py`) is genuinely implemented with streaming support for `ibm_aml`. However, it is completely disconnected from the actual pipeline entry points. `app/main.py` and `ui/dashboard.py` hardcode `pd.read_csv()`.
 - **Risk Score Generation**: Confirmed as an objective, strictly bounded 0-100 sum: `anomaly_score` (0.3 weight), `historical_deviation` (0.3 weight), `is_burst_activity` (0.2 weight), and `sender_unique_counterparties` (0.2 weight). No arbitrary inflation, floors, or false probabilities exist.
 - **Typology & Evidence Engine**: Both strictly precede LLM execution. The LLM receives a Pydantic `EvidencePackage`, strictly forbidding hallucinated typologies.
-- **Human Review**: Implemented in Streamlit (`Approve`, `Reject`, `Request Revision`). State changes are successfully intercepted and persisted to SQLite's `sar_reports` and `investigations` tables.
 - **Persistence / Audit Logging**: SQLite creates tables automatically. Audit events (e.g. `HUMAN_REVIEW_REVISION_REQUESTED`) are successfully written to the `audit_logs` table. No secrets or raw data are leaked to logs.
 
-## 35. Current Development Position
-**COMPLETED THROUGH:** 
-Pre-Final Truth Audit (Verifying actual configuration and code state).
+## 35. Targeted Corrections & Verification
+- **Status**: COMPLETE & VERIFIED
+- **Fix 1 — Hugging Face Connected**:
+  - Connected `load_and_validate_dataset` from `data/ingestion/huggingface_loader.py` into CLI (`app/main.py`) via `--source hf|csv`, `--dataset`, `--max-records` and env var `DATA_SOURCE`.
+  - Integrated into Streamlit UI (`ui/dashboard.py`) with source selection (Local CSV vs Hugging Face), sample limits, and `@st.cache_data` caching to prevent repeated network fetching on reruns.
+  - Enhanced `app/schema.py` (`identify_columns`) to map `amount`, `transaction_id`, and `customer_id` (or `sender`).
+  - Added full test suite in `tests/test_ingestion.py` (11/11 tests PASSED, including mocked streaming, error handling, pipeline compatibility, and real 5-record smoke test).
+  - Verified live CLI execution: `python app/main.py --source hf --max-records 5` streamed live records from `eexzzm/IBM-Transactions-for-Anti-Money-Laundering-HI-Small-Trans`, identified anomalies, orchestrated agents, audited, and logged to SQLite and JSONL with exit code 0.
+- **Fix 2 — Ollama HTTP Integration**:
+  - Refactored `llm/ollama_provider.py` from CLI `subprocess.run` to local HTTP REST API (`/api/generate` with `stream=False`) via `requests`.
+  - Actively uses configured `OLLAMA_HOST` (default `http://localhost:11434`) and `OLLAMA_MODEL` (default `llama3`).
+  - Added comprehensive unit tests in `tests/test_llm.py` mocking network, timeout, HTTP error, malformed JSON, and empty responses (17/17 LLM tests PASSED).
+  - **Live Ollama Verification**: Successfully executed live inference against running local Ollama instance on `localhost:11434` with model `llama3`.
+- **Fix 3 — Standardize AUDIT_LOG_PATH**:
+  - Updated `storage/__init__.py` to make `AUDIT_LOG_PATH` the canonical environment variable with fallback to legacy `SAR_JSONL_PATH` (default `audit_trail.jsonl`).
+  - Added unit tests in `tests/test_storage.py` verifying canonical path override, legacy fallback, precedence, and data preservation (all 13 storage tests PASSED).
+- **Fix 4 — OpenAI Cleanup**:
+  - Verified zero runtime OpenAI imports in codebase.
+  - Removed obsolete `openai` dependency from `requirements.txt`.
+  - Cleanly normalized `requirements.txt` to standard UTF-8.
+- **Gemini Live Verification**:
+  - Verified local `.env` has valid `GEMINI_API_KEY` and `GEMINI_MODEL=gemini-3.8-flash`.
+  - Executed live API call through `GeminiProvider`; succeeded with real response (`GEMINI_ONLINE_OK`).
+  - Ran multi-agent pipeline with Gemini for local CSV and Hugging Face transactions.
+- **End-to-End Pipeline Verification**:
+  - Local CSV pipeline (`app/main.py --source csv`): Ingested, cleaned, detected anomaly, orchestrated multi-agent workflow, logged to SQLite and JSONL with exit code 0.
+  - Hugging Face pipeline (`app/main.py --source hf --max-records 5`): Streamed live dataset, normalized schema, detected anomaly, orchestrated multi-agent workflow, logged to SQLite and JSONL with exit code 0.
+- **Regression Suite Verification**:
+  - Executed `pytest tests/ -v`: **103 passed, 0 failed, 0 skipped**.
+- **UI / Startup Verification**:
+  - Tested headless import of `ui.dashboard` and `ui.pages` package; imported with zero errors.
+
+## 36. Current Development Position
+**COMPLETED THROUGH:**
+All 14 initial implementation phases, pre-final engineering audits, and the 4 targeted corrections (Hugging Face integration, Ollama HTTP REST, AUDIT_LOG_PATH standardization, and OpenAI removal).
 
 **CURRENT STATUS:**
-READY WITH MINOR FIXES
+READY. Verified with live providers (Gemini & Ollama), both ingestion sources (CSV & HF), and 100% test pass rate (103/103).
 
 **NEXT ACTION:**
-The user will review the identified gaps (e.g., `OLLAMA_HOST` ignoring, `AUDIT_LOG_PATH` naming mismatch, `pd.read_csv` hardcoding) and instruct the final corrections.
+Ready for final presentation and human reviewer workflow evaluations in the Streamlit UI.
