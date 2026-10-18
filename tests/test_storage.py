@@ -112,3 +112,51 @@ def test_get_storage_factory(monkeypatch):
     monkeypatch.setenv("STORAGE_BACKEND", "sqlite")
     store = get_storage()
     assert isinstance(store, SQLiteStore)
+
+def test_storage_audit_log_path_canonical(monkeypatch, tmp_path):
+    custom_path = str(tmp_path / "canonical_audit.jsonl")
+    monkeypatch.setenv("STORAGE_BACKEND", "jsonl")
+    monkeypatch.setenv("AUDIT_LOG_PATH", custom_path)
+    monkeypatch.delenv("SAR_JSONL_PATH", raising=False)
+    
+    store = get_storage()
+    assert isinstance(store, JsonlStore)
+    assert store.file_path == custom_path
+
+def test_storage_sar_jsonl_path_legacy_fallback(monkeypatch, tmp_path):
+    legacy_path = str(tmp_path / "legacy_audit.jsonl")
+    monkeypatch.setenv("STORAGE_BACKEND", "jsonl")
+    monkeypatch.delenv("AUDIT_LOG_PATH", raising=False)
+    monkeypatch.setenv("SAR_JSONL_PATH", legacy_path)
+    
+    store = get_storage()
+    assert isinstance(store, JsonlStore)
+    assert store.file_path == legacy_path
+
+def test_storage_precedence_audit_over_legacy(monkeypatch, tmp_path):
+    canonical_path = str(tmp_path / "canonical.jsonl")
+    legacy_path = str(tmp_path / "legacy.jsonl")
+    monkeypatch.setenv("STORAGE_BACKEND", "jsonl")
+    monkeypatch.setenv("AUDIT_LOG_PATH", canonical_path)
+    monkeypatch.setenv("SAR_JSONL_PATH", legacy_path)
+    
+    store = get_storage()
+    assert isinstance(store, JsonlStore)
+    assert store.file_path == canonical_path
+
+def test_storage_preserves_existing_data(tmp_path):
+    target = tmp_path / "existing_audit.jsonl"
+    with open(target, "w") as f:
+        f.write(json.dumps({"type": "audit_log", "entity_id": "PRESERVED_1", "action": "INITIAL", "timestamp": "2023-01-01T00:00:00Z"}) + "\n")
+        
+    store = JsonlStore(str(target))
+    history = store.get_audit_history()
+    assert len(history) == 1
+    assert history[0]["entity_id"] == "PRESERVED_1"
+    
+    # Appending a new record preserves the old one
+    store.log_audit("NEW_2", "SAR_REPORT", "APPEND", "OK")
+    updated_history = store.get_audit_history()
+    assert len(updated_history) == 2
+    assert any(h["entity_id"] == "PRESERVED_1" for h in updated_history)
+    assert any(h["entity_id"] == "NEW_2" for h in updated_history)
