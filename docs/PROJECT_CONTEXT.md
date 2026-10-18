@@ -313,10 +313,29 @@ When returning after a long break:
 
 ## 36. Current Development Position
 **COMPLETED THROUGH:**
-All 14 initial implementation phases, pre-final engineering audits, and the 4 targeted corrections (Hugging Face integration, Ollama HTTP REST, AUDIT_LOG_PATH standardization, and OpenAI removal).
+All 14 initial implementation phases, pre-final engineering audits, the 4 targeted corrections (Hugging Face integration, Ollama HTTP REST, AUDIT_LOG_PATH standardization, and OpenAI removal), and final smoke verification.
 
 **CURRENT STATUS:**
-READY. Verified with live providers (Gemini & Ollama), both ingestion sources (CSV & HF), and 100% test pass rate (103/103).
+READY. Fully verified with live providers (Gemini & Ollama), both data sources (CSV & HF), Streamlit startup health check (200 OK), and 100% test pass rate (103/103).
 
-**NEXT ACTION:**
-Ready for final presentation and human reviewer workflow evaluations in the Streamlit UI.
+## 37. Final Smoke Verification (2026-10-18)
+- **Status**: COMPLETE & VERIFIED
+- **Gemini Live Inference**:
+  - Executed live inference using configured `GEMINI_MODEL=gemini-3.8-flash` and `.env` credentials.
+  - Succeeded on Attempt 1 with expected text generation (`CONFIRMED`).
+  - *Observation:* Previous transient Google Cloud 503 high-demand spikes were caught gracefully by `GeminiProvider` without host crashes; service has recovered.
+- **Streamlit Application Startup**:
+  - Documented command `streamlit run ui/dashboard.py` successfully launched the local server on `http://localhost:8501`.
+  - HTTP health check (`http://localhost:8501/_stcore/health`) responded with `200 ok`.
+  - *Note:* Distinguishes startup and HTTP health verification from actual user browser interaction (which remains a manual reviewer action).
+- **Automated Regression Suite**:
+  - Executed `pytest tests/ -v`: **103 passed, 0 failed, 0 skipped** (35.74s runtime). Zero tests disabled or weakened.
+- **Remaining Limitations**:
+  - HF Hub rate-limiting advisory remains for unauthenticated streaming.
+  - Interactive browser clicking / reviewer workflow is a manual action.
+- **Manual Verification Status**:
+  - Local CSV pipeline: Verified CLI and service execution.
+  - Hugging Face pipeline: Verified CLI streaming and schema normalization.
+  - Ollama HTTP REST: Verified live local inference (`llama3`).
+  - Gemini API: Verified live cloud inference (`gemini-3.8-flash`).
+  - Streamlit Dashboard: Verified startup, health check, and component imports.
